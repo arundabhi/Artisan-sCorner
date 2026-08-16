@@ -1,0 +1,48 @@
+{
+  "version": 2,
+  "builds": [
+    {
+      "src": "client/package.json",
+      "use": "@vercel/static-build",
+      "config": {
+        "distDir": "dist"
+      }
+    },
+    {
+      "src": "server/api/index.js",
+      "use": "@vercel/node"
+    }
+  ],
+  "routes": [
+    {
+      "src": "/api/(.*)",
+      "dest": "server/api/index.js"
+    },
+    {
+      "src": "/assets/(.*)",
+      "dest": "client/assets/$1"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "client/index.html"
+    }
+  ],
+  "crons": [
+    {
+      "path": "/api/cron/auto-cancel",
+      "schedule": "0 0 * * *"
+    },
+    {
+      "path": "/api/cron/waitlist-promote",
+      "schedule": "5 0 * * *"
+    },
+    {
+      "path": "/api/cron/waitlist-expire",
+      "schedule": "10 0 * * *"
+    },
+    {
+      "path": "/api/cron/auto-complete",
+      "schedule": "15 0 * * *"
+    }
+  ]
+}
