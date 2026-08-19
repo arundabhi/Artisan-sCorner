@@ -5,6 +5,9 @@ import { Store } from '../models/store.model.js';
 
 // Protect Routes
 export const protect = asyncHandler(async (req, res, next) => {
+
+  console.log('Cookies:', req.cookies);
+  console.log('Authorization:', req.headers.authorization);
   let token;
 
   // Check cookies first
