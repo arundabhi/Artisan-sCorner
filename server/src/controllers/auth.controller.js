@@ -106,6 +106,9 @@ const login = asyncHandler(async (req, res) => {
   const loggedInUser = await User.findById(user._id).select(
     "-password -refreshToken"
   );
+  console.log("Setting auth cookies");
+  console.log("NODE_ENV:", process.env.NODE_ENV);
+  console.log("Cookie options:", COOKIE_OPTIONS);
 
   return res
     .status(200)
