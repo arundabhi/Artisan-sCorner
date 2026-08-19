@@ -84,6 +84,12 @@ app.use('/api/admin', adminRoutes);
 app.get('/health', (req, res) => {
   res.status(200).json({ success: true, status: 'healthy', time: new Date() });
 });
+app.get('/', (req, res) => {
+  res.status(200).json({
+    success: true,
+    message: "Artisan's Corner API is running",
+  });
+});
 
 // Centralized Error Handling Middleware (Must be last)
 app.use(errorHandler);
