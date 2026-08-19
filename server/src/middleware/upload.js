@@ -1,10 +1,11 @@
 import multer from 'multer';
 import fs from 'fs';
 import path from 'path';
+import os from 'os';
 import { ApiError } from '../utils/ApiError.js';
 
 // Ensure the local temp upload directory exists
-const tempDir = './public/temp';
+const tempDir = path.join(os.tmpdir(), 'artisans-corner-temp');
 if (!fs.existsSync(tempDir)) {
   fs.mkdirSync(tempDir, { recursive: true });
 }
