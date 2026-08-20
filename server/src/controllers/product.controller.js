@@ -143,7 +143,8 @@ const getProducts = asyncHandler(async (req, res) => {
     minPrice,
     maxPrice,
     minRating,
-    sort = "-createdAt",
+    sort = "newest",
+    search,
   } = req.query;
 
   const filter = { isActive: true };
@@ -158,13 +159,35 @@ const getProducts = asyncHandler(async (req, res) => {
     if (maxPrice) filter.price.$lte = Number(maxPrice);
   }
 
+  if (search?.trim()) {
+    filter.$or = [
+      { name: { $regex: search, $options: "i" } },
+      { description: { $regex: search, $options: "i" } },
+      { category: { $regex: search, $options: "i" } },
+    ];
+  }
+
+  // Map sort parameters to Mongoose sorting criteria
+  let sortCriteria = "-createdAt";
+  if (sort === "priceAsc") {
+    sortCriteria = "price";
+  } else if (sort === "priceDesc") {
+    sortCriteria = "-price";
+  } else if (sort === "rating") {
+    sortCriteria = "-rating";
+  } else if (sort === "newest") {
+    sortCriteria = "-createdAt";
+  } else {
+    sortCriteria = sort;
+  }
+
   const skip = (Number(page) - 1) * Number(limit);
 
   const [products, total] = await Promise.all([
     Product.find(filter)
       .populate("vendor", "name")
       .populate("store", "name slug logo")
-      .sort(sort)
+      .sort(sortCriteria)
       .skip(skip)
       .limit(Number(limit))
       .lean(),
