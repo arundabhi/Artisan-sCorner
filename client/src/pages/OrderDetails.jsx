@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useSelector } from 'react-redux';
-import { ArrowLeft, CreditCard, MapPin, ShoppingBag, Truck, Check, Loader2 } from 'lucide-react';
+import { ArrowLeft, CreditCard, MapPin, ShoppingBag, Truck, Check, Loader2, Star } from 'lucide-react';
 import api from '../api/axios.js';
 import toast from 'react-hot-toast';
 
@@ -9,25 +9,62 @@ const OrderDetails = () => {
   const { id } = useParams();
   const { user } = useSelector((state) => state.auth);
 
+  const isVendor = user?.role === 'VENDOR';
+  const isAdmin = user?.role === 'ADMIN';
+
   const [order, setOrder] = useState(null);
   const [loading, setLoading] = useState(true);
   const [updatingItemId, setUpdatingItemId] = useState('');
+
+  // Review states
+  const [reviewedMap, setReviewedMap] = useState({});
+  const [reviewModalItem, setReviewModalItem] = useState(null);
+  const [reviewRating, setReviewRating] = useState(5);
+  const [reviewComment, setReviewComment] = useState('');
+  const [submittingReview, setSubmittingReview] = useState(false);
 
   useEffect(() => {
     const fetchOrderDetails = async () => {
       try {
         const res = await api.get(`/orders/${id}`);
-        console.log(res.data);
-
         setOrder(res.data);
+
+        // Fetch review eligibility for each item if buyer and order is delivered
+        const isBuyer = user?.role === 'BUYER' || (!isVendor && !isAdmin);
+        if (res.data.orderStatus === 'DELIVERED' && isBuyer) {
+          const statusMap = {};
+          await Promise.all(
+            res.data.items.map(async (item) => {
+              try {
+                const productId = item.product?._id || item.product;
+                if (productId) {
+                  const revRes = await api.get(`/reviews/product/${productId}`);
+                  const reviewsList = revRes.reviews || revRes.data?.reviews || [];
+                  const alreadyReviewed = reviewsList.some(
+                    (rev) =>
+                      (rev.user?._id || rev.user)?.toString() === (user?.id || user?._id)?.toString() &&
+                      rev.order?.toString() === res.data._id.toString()
+                  );
+                  statusMap[item._id] = alreadyReviewed;
+                }
+              } catch (err) {
+                console.error('Error checking review status for item:', item._id, err);
+              }
+            })
+          );
+          setReviewedMap(statusMap);
+        }
       } catch (err) {
         toast.error('Failed to load order details');
       } finally {
         setLoading(false);
       }
     };
-    fetchOrderDetails();
-  }, [id]);
+
+    if (id && user) {
+      fetchOrderDetails();
+    }
+  }, [id, user]);
 
   const handleStatusChange = async (itemId, newStatus) => {
     setUpdatingItemId(itemId);
@@ -43,6 +80,35 @@ const OrderDetails = () => {
       toast.error(err.message || 'Failed to update delivery status');
     } finally {
       setUpdatingItemId('');
+    }
+  };
+
+  const handleReviewSubmit = async (e) => {
+    e.preventDefault();
+    if (!reviewModalItem) return;
+
+    setSubmittingReview(true);
+    try {
+      const productId = reviewModalItem.product?._id || reviewModalItem.product;
+      await api.post('/reviews', {
+        product: productId,
+        order: order._id,
+        rating: reviewRating,
+        comment: reviewComment,
+      });
+
+      toast.success('Review submitted successfully!');
+      setReviewedMap((prev) => ({
+        ...prev,
+        [reviewModalItem._id]: true,
+      }));
+      setReviewModalItem(null);
+      setReviewRating(5);
+      setReviewComment('');
+    } catch (err) {
+      toast.error(err.message || 'Failed to submit review');
+    } finally {
+      setSubmittingReview(false);
     }
   };
 
@@ -63,8 +129,7 @@ const OrderDetails = () => {
     );
   }
 
-  const isVendor = user?.role === 'VENDOR';
-  const isAdmin = user?.role === 'ADMIN';
+
 
   const getStatusColor = (status) => {
     switch (status) {
@@ -135,14 +200,25 @@ const OrderDetails = () => {
                     <h3 className="font-serif font-semibold text-artisanal-900 text-sm truncate">{item.productName}</h3>
                     <p className="text-xs text-charcoal-muted mt-0.5">Qty: {item.quantity} • ${item.unitPrice.toFixed(2)} each</p>
 
-                    {/* Link to leave review if buyer & order delivered */}
+                    {/* Link/Button to leave review if buyer & order delivered */}
                     {order.orderStatus === 'DELIVERED' && !isVendor && !isAdmin && (
-                      <Link
-                        to={`/products/${item.product?.slug || ''}`}
-                        className="text-xs font-semibold text-artisanal-600 hover:underline mt-2 inline-block"
-                      >
-                        Write a review &rarr;
-                      </Link>
+                      reviewedMap[item._id] ? (
+                        <span className="text-xs font-semibold text-green-600 flex items-center gap-1 mt-2 justify-center sm:justify-start">
+                          <Check size={12} /> Reviewed
+                        </span>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setReviewModalItem(item);
+                            setReviewRating(5);
+                            setReviewComment('');
+                          }}
+                          className="text-xs font-semibold text-artisanal-600 hover:underline mt-2 inline-block text-left"
+                        >
+                          Write a review &rarr;
+                        </button>
+                      )
                     )}
                   </div>
 
@@ -250,6 +326,82 @@ const OrderDetails = () => {
         </div>
 
       </div>
+
+      {/* Review Submission Modal */}
+      {reviewModalItem && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40 backdrop-blur-sm p-4">
+          <div className="bg-white rounded-3xl p-6 max-w-md w-full border border-artisanal-200 shadow-2xl space-y-4 animate-in fade-in zoom-in-95 duration-200">
+            <h3 className="text-xl font-serif font-bold text-artisanal-900">
+              Review {reviewModalItem.productName}
+            </h3>
+
+            <form onSubmit={handleReviewSubmit} className="space-y-4">
+              <div>
+                <label className="block text-xs font-semibold uppercase tracking-wider text-charcoal-muted mb-2">
+                  Rating
+                </label>
+                <div className="flex gap-2">
+                  {[1, 2, 3, 4, 5].map((star) => (
+                    <button
+                      key={star}
+                      type="button"
+                      onClick={() => setReviewRating(star)}
+                      className="focus:outline-none"
+                    >
+                      <Star
+                        size={28}
+                        className={
+                          star <= reviewRating
+                            ? 'text-amber-500 fill-amber-500 cursor-pointer transition-colors duration-150'
+                            : 'text-artisanal-300 hover:text-amber-400 cursor-pointer transition-colors duration-150'
+                        }
+                      />
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold uppercase tracking-wider text-charcoal-muted mb-2">
+                  Comment
+                </label>
+                <textarea
+                  rows={4}
+                  value={reviewComment}
+                  onChange={(e) => setReviewComment(e.target.value)}
+                  placeholder="Describe the material characteristics, quality, texture, and your overall experience..."
+                  className="w-full bg-artisanal-50 border border-artisanal-200 rounded-2xl p-4 text-sm focus:outline-none focus:border-artisanal-500 transition-colors"
+                  required
+                />
+              </div>
+
+              <div className="flex justify-end gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setReviewModalItem(null)}
+                  className="px-5 py-2.5 text-sm font-semibold text-charcoal bg-artisanal-100 hover:bg-artisanal-200 rounded-xl transition-colors"
+                  disabled={submittingReview}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-5 py-2.5 text-sm font-semibold text-white bg-artisanal-600 hover:bg-artisanal-700 rounded-xl flex items-center gap-2 shadow-sm hover:shadow transition-colors"
+                  disabled={submittingReview}
+                >
+                  {submittingReview ? (
+                    <>
+                      <Loader2 size={14} className="animate-spin" /> Submitting...
+                    </>
+                  ) : (
+                    'Submit Review'
+                  )}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

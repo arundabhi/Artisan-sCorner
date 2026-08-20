@@ -297,6 +297,31 @@ const updateProduct = asyncHandler(async (req, res) => {
     product.slug = await generateUniqueSlug(req.body.name, product._id);
   }
 
+  // Handle removal of existing images if existingImages is sent
+  if (req.body.existingImages !== undefined) {
+    try {
+      const remainingImages = typeof req.body.existingImages === 'string'
+        ? JSON.parse(req.body.existingImages)
+        : req.body.existingImages;
+
+      // Determine which images were deleted
+      const remainingPublicIds = remainingImages.map(img => img.publicId).filter(Boolean);
+      const deletedImages = product.images.filter(img => !remainingPublicIds.includes(img.publicId));
+
+      // Delete removed images from Cloudinary
+      for (const img of deletedImages) {
+        if (img.publicId) {
+          await deleteFromCloudinary(img.publicId);
+        }
+      }
+
+      // Update product images list to only keep remaining ones
+      product.images = product.images.filter(img => remainingPublicIds.includes(img.publicId));
+    } catch (error) {
+      console.error("Error parsing existingImages:", error);
+    }
+  }
+
   // Support adding new images without removing existing ones
   const imageFiles = req.files || [];
   if (imageFiles.length) {

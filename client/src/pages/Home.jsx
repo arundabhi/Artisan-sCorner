@@ -24,7 +24,7 @@ const Home = () => {
   }, []);
 
   const categories = [
-    { name: 'Kitchenware', count: 'WW-DESK', icon: <Coffee size={24} className="text-clay" />, url: '/products?category=Kitchenware', img: 'https://images.unsplash.com/photo-1594751464207-6f81df6f8812?w=400' },
+    { name: 'Kitchenware', count: 'WW-DESK', icon: <Coffee size={24} className="text-clay" />, url: '/products?category=Kitchenware', img: 'https://tse3.mm.bing.net/th/id/OIP.3M37jmiw6e95lBaQfxhLJwHaE7?w=400' },
     { name: 'Ceramics', count: 'CR-MUG', icon: <Star size={24} className="text-clay" />, url: '/products?category=Ceramics', img: 'https://images.unsplash.com/photo-1578500494198-246f612d3b3d?w=400' },
     { name: 'Home Decor', count: 'HD-PILLOW', icon: <Heart size={24} className="text-clay" />, url: '/products?category=Home Decor', img: 'https://images.unsplash.com/photo-1583847268964-b28dc8f51f92?w=400' },
     { name: 'Leather Goods', count: 'LG-WALLET', icon: <ShieldCheck size={24} className="text-clay" />, url: '/products?category=Leather Goods', img: 'https://images.unsplash.com/photo-1627123424574-724758594e93?w=400' },
@@ -32,7 +32,7 @@ const Home = () => {
 
   return (
     <div className="space-y-20 pb-16">
-      
+
       {/* 1. HERO SECTION */}
       <section className="relative rounded-3xl overflow-hidden bg-artisanal-900 text-white min-h-[500px] flex items-center p-8 sm:p-16">
         <div className="absolute inset-0 z-0 opacity-40">
@@ -160,7 +160,7 @@ const Home = () => {
           </p>
         </div>
       </section>
-      
+
     </div>
   );
 };

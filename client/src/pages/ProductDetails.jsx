@@ -42,7 +42,7 @@ const ProductDetails = () => {
         // Fetch Reviews
         const revRes = await api.get(`/reviews/product/${prod._id}`);
 
-        const reviewsData = revRes.data?.data?.reviews || [];
+        const reviewsData = revRes.reviews || revRes.data?.reviews || [];
         setReviews(reviewsData);
 
         // Check review eligibility if buyer
@@ -60,10 +60,10 @@ const ProductDetails = () => {
           const eligible = [];
           for (const order of matchingOrders) {
             // We search if a review already exists for this user + product + order
-            const reviewed = (revRes.data?.data?.reviews || []).some(
+            const reviewed = reviewsData.some(
               (rev) =>
-                rev.user._id.toString() === user.id.toString() &&
-                rev.order.toString() === order._id.toString()
+                (rev.user?._id || rev.user)?.toString() === (user?.id || user?._id)?.toString() &&
+                rev.order?.toString() === order._id.toString()
             );
             if (!reviewed) {
               eligible.push(order);
@@ -159,8 +159,9 @@ const ProductDetails = () => {
       // Update reviews list locally
       setReviews([
         {
-          ...res.data.data,
+          ...(res.data || res),
           user: {
+            _id: user._id || user.id,
             name: user.name,
             avatar: user.avatar
           }
@@ -396,7 +397,7 @@ const ProductDetails = () => {
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
                       <img
-                        src={rev.user.avatar?.url || 'https://res.cloudinary.com/demo/image/upload/v1502432214/avatar-placeholder.png'}
+                        src={typeof rev.user.avatar === 'string' ? rev.user.avatar : (rev.user.avatar?.url || 'https://res.cloudinary.com/demo/image/upload/v1502432214/avatar-placeholder.png')}
                         alt={rev.user.name}
                         className="w-10 h-10 rounded-full object-cover"
                       />

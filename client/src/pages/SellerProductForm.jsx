@@ -55,7 +55,7 @@ const SellerProductForm = () => {
           // Let's query GET /api/products with a direct vendor list or query details.
           // Wait, let's make sure the details endpoint works with both ID and slug! Mongoose CastError catches ID, and slug queries string. So the details endpoint `/api/products/:slug` in controller actually does `findOne({ slug })`. Let's see: we can query by ID directly by fetching vendor products and filtering. This is a very safe fallback.
           const res = await api.get('/products/vendor/me');
-          const prod = res.data.find(p => p._id === id);
+          const prod = res.data?.products?.find(p => p._id === id);
           
           if (!prod) {
             toast.error('Product not found');
@@ -140,6 +140,11 @@ const SellerProductForm = () => {
     imageFiles.forEach((file) => {
       formData.append('images', file);
     });
+
+    // Append remaining existing images so server knows what to keep/delete
+    if (isEdit) {
+      formData.append('existingImages', JSON.stringify(existingImages));
+    }
 
     try {
       if (isEdit) {
